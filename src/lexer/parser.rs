@@ -17,19 +17,25 @@ pub struct Parser<I : Iterator<Item=Token>> {
     scanner: I,
     stack: Vec<Token>,
     output: Vec<ast::Node>,
+    node_id: usize,
 }
 
 impl<I : Iterator<Item=Token>> Parser<I> {
     pub fn new(scanner: I) -> Self {
-        Self { scanner, stack: Vec::new(), output: Vec::new() }
+        Self { scanner, stack: Vec::new(), output: Vec::new(), node_id: 0 }
     }
 
     fn push_out(&mut self, token: Token) {
         let node = match token {
-            Token::Literal(char) => ast::Node::new_literal(char, 0),
+            Token::Literal(char) => {
+                let node = ast::Node::new_literal(char, self.node_id);
+                self.node_id += 1;
+
+                node
+            },
             Token::Klenne => ast::Node::new_kleene(self.output.pop().unwrap()),
-            Token::Alternation => ast::Node::new_alternation(vec![self.output.pop().unwrap(), self.output.pop().unwrap()]),
-            Token::Concatenation => ast::Node::new_concatenation(vec![self.output.pop().unwrap(), self.output.pop().unwrap()]),
+            Token::Alternation => ast::Node::new_alternation(self.output.pop().unwrap(), self.output.pop().unwrap()),
+            Token::Concatenation => ast::Node::new_concatenation(self.output.pop().unwrap(), self.output.pop().unwrap()),
             Token::LParen | Token::RParen => panic!(),
         };
 
@@ -74,60 +80,3 @@ impl<I : Iterator<Item=Token>> Parser<I> {
         self.output.pop().unwrap()
     }
 }
-
-
-/*
-#[cfg(test)]
-mod tests {
-    use std::iter::Peekable;
-    use super::Token;
-    use crate::lexer::scanner;
-    use super::rpn;
-
-    fn to_expr(tokens: &Vec<Token>) -> String {
-        let mut buffer = String::new();
-
-        for token in tokens {
-            match token {
-                Token::Literal(c) => buffer.push(*c),
-                Token::Klenne => buffer.push('*'),
-                Token::Alternation => buffer.push('|'),
-                Token::Concatenation => buffer.push('.'),
-                Token::LParen => buffer.push('('),
-                Token::RParen => buffer.push(')'),
-            }
-        }
-
-        buffer
-    }
-
-    macro_rules! rpn_tests {
-        ($($input:literal -> $output:literal),+) => {
-            #[test]
-            fn rpn_tests() {
-                $({
-                    let mut scanner = scanner::AutoConcatenation::new(scanner::Scanner::new($input));
-                    let result = rpn(&mut scanner);
-
-                    assert_eq!(to_expr(&result), $output, "rpn of \"{}\" should be \"{}\"", $input, $output);
-                })+
-            }
-        };
-    }
-
-    rpn_tests!(
-        "a*b" -> "a*b.",
-        "a*b*" -> "a*b*.",
-        "a|b" -> "ab|",
-        "a|b|c" -> "ab|c|",
-        "ab" -> "ab.",
-        "abc" -> "ab.c.",
-        "ab|c" -> "ab.c|",
-        "a(b|c)" -> "abc|.",
-        "a|bc" -> "abc.|",
-        "ab*" -> "ab*.",
-        "(ab)*" -> "ab.*",
-        "(a|b)*a(a|b)" -> "ab|*a.ab|."
-    );
-}
- */

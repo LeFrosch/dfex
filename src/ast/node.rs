@@ -47,12 +47,12 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn new_alternation(children: Vec<Node>) -> Node {
-        Node::Alternation(AlternationNode { metadata: Metadata::new(), children })
+    pub fn new_alternation(right: Node, left: Node) -> Node {
+        Node::Alternation(AlternationNode { metadata: Metadata::new(), children: vec![left, right] })
     }
 
-    pub fn new_concatenation(children: Vec<Node>) -> Node {
-        Node::Concatenation(ConcatenationNode { metadata: Metadata::new(), children })
+    pub fn new_concatenation(right: Node, left: Node) -> Node {
+        Node::Concatenation(ConcatenationNode { metadata: Metadata::new(), children: vec![left, right] })
     }
 
     pub fn new_kleene(child: Node) -> Node {
