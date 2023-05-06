@@ -17,7 +17,7 @@ impl Tree {
         self.root.iter_post_mut(&mut f);
     }
 
-    pub fn debug_graph(&mut self) -> String {
+    pub fn debug_graph(&self) -> String {
         let mut buffer = String::new();
         buffer.push_str("digraph ast {\n");
 

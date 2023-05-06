@@ -1,4 +1,4 @@
-use std::{iter, slice};
+use std::slice;
 
 pub struct Metadata {
     pub empty: bool,
@@ -8,7 +8,7 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Metadata {
             empty: false,
             first: vec![],
@@ -47,6 +47,22 @@ pub enum Node {
 }
 
 impl Node {
+    pub fn new_alternation(children: Vec<Node>) -> Node {
+        Node::Alternation(AlternationNode { metadata: Metadata::new(), children })
+    }
+
+    pub fn new_concatenation(children: Vec<Node>) -> Node {
+        Node::Concatenation(ConcatenationNode { metadata: Metadata::new(), children })
+    }
+
+    pub fn new_kleene(child: Node) -> Node {
+        Node::Kleene(KleeneNode { metadata: Metadata::new(), child: Box::new(child) })
+    }
+
+    pub fn new_literal(character: char, id: usize) -> Node {
+        Node::Literal(LiteralNode { metadata: Metadata::new(), id, character })
+    }
+
     pub fn metadata(&self) -> &Metadata {
         match self {
             Node::Alternation(node) => &node.metadata,
