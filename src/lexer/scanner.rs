@@ -9,6 +9,7 @@ pub enum Token {
     Concatenation,
     LParen,
     RParen,
+    Invalid(char),
 }
 
 pub struct Scanner<'a> {
@@ -16,8 +17,8 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(text: &str) -> Scanner {
-        Scanner { chars: text.chars() }
+    pub fn new(text: &'a str) -> Self {
+        Self { chars: text.chars() }
     }
 }
 
@@ -36,7 +37,7 @@ fn map_char(char: char) -> Token {
         '|' => Token::Alternation,
         '*' => Token::Klenne,
         'a'..='z' | 'A'..='Z' | '0'..='9' => Token::Literal(char),
-        _ => panic!("invalid token"),
+        c => Token::Invalid(c),
     }
 }
 
@@ -46,8 +47,8 @@ pub struct AutoConcatenation<'a> {
 }
 
 impl<'a> AutoConcatenation<'a> {
-    pub fn new(scanner: Scanner) -> AutoConcatenation {
-        AutoConcatenation { scanner: scanner.peekable(), insert_concatenation: false }
+    pub fn new(scanner: Scanner<'a>) -> Self {
+        Self { scanner: scanner.peekable(), insert_concatenation: false }
     }
 }
 

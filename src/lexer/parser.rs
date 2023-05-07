@@ -1,6 +1,7 @@
 use crate::ast;
 
 use super::scanner::Token;
+use super::{Result, Error};
 
 impl Token {
     fn precedence(&self) -> u8 {
@@ -25,7 +26,25 @@ impl<I : Iterator<Item=Token>> Parser<I> {
         Self { scanner, stack: Vec::new(), output: Vec::new(), node_id: 0 }
     }
 
-    fn push_out(&mut self, token: Token) {
+    // https://en.wikipedia.org/wiki/Shunting_yard_algorithm
+    pub fn parse(&mut self) -> Result<ast::Node> {
+        while let Some(token) = self.scanner.next() {
+            match token {
+                Token::Literal(_) => self.push_out(token)?,
+                Token::RParen => self.find_matching_lparen()?,
+                Token::LParen => self.stack.push(token),
+                _ => self.push_operator(token)?,
+            }
+        }
+
+        while let Some(token) = self.stack.pop() {
+            self.push_out(token)?;
+        }
+
+        self.output.pop().ok_or(Error)
+    }
+
+    fn push_out(&mut self, token: Token) -> Result<()> {
         let node = match token {
             Token::Literal(char) => {
                 let node = ast::Node::new_literal(char, self.node_id);
@@ -33,50 +52,41 @@ impl<I : Iterator<Item=Token>> Parser<I> {
 
                 node
             },
-            Token::Klenne => ast::Node::new_kleene(self.output.pop().unwrap()),
-            Token::Alternation => ast::Node::new_alternation(self.output.pop().unwrap(), self.output.pop().unwrap()),
-            Token::Concatenation => ast::Node::new_concatenation(self.output.pop().unwrap(), self.output.pop().unwrap()),
-            Token::LParen | Token::RParen => panic!(),
+            Token::Klenne => ast::Node::new_kleene(self.output.pop().ok_or(Error)?),
+            Token::Alternation => ast::Node::new_alternation(self.output.pop().ok_or(Error)?, self.output.pop().ok_or(Error)?),
+            Token::Concatenation => ast::Node::new_concatenation(self.output.pop().ok_or(Error)?, self.output.pop().ok_or(Error)?),
+            Token::LParen | Token::RParen | Token::Invalid(_) => return Err(Error),
         };
 
         self.output.push(node);
+
+        Ok(())
     }
 
-    fn push_operator(&mut self, token: Token) {
+    fn push_operator(&mut self, token: Token) -> Result<()> {
         while let Some(last) = self.stack.last() {
             if token.precedence() > last.precedence() {
                 break
             }
 
-            let last = self.stack.pop().unwrap();
-            self.push_out(last);
+            let last = self.stack.pop().ok_or(Error)?;
+            self.push_out(last)?;
         }
 
         self.stack.push(token);
+
+        Ok(())
     }
 
-    pub fn parse(&mut self) -> ast::Node {
-        while let Some(token) = self.scanner.next() {
-            match token {
-                Token::Literal(_) => self.push_out(token),
-                Token::RParen => {
-                    while let Some(token) = self.stack.pop() {
-                        if token == Token::LParen {
-                            break
-                        }
-
-                        self.push_out(token);
-                    }
-                },
-                Token::LParen => self.stack.push(token),
-                _ => self.push_operator(token),
-            }
-        }
-
+    fn find_matching_lparen(&mut self) -> Result<()> {
         while let Some(token) = self.stack.pop() {
-            self.push_out(token);
+            if token == Token::LParen {
+                return Ok(());
+            }
+
+            self.push_out(token)?;
         }
 
-        self.output.pop().unwrap()
+        Err(Error)
     }
 }

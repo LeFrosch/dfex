@@ -1,6 +1,7 @@
 use super::{Node, Tree};
 
 impl Tree {
+    // https://en.wikipedia.org/wiki/Glushkov%27s_construction_algorithm
     pub fn analyze(&mut self) {
         self.iter_pre_mut(pre_pass);
         self.iter_post_mut(post_pass);

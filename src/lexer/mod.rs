@@ -3,13 +3,18 @@ use crate::ast;
 mod scanner;
 mod parser;
 
-pub fn parse(text: &str) -> ast::Tree {
+#[derive(Debug)]
+pub struct Error;
+
+type Result<T> = std::result::Result<T, Error>;
+
+pub fn parse(text: &str) -> Result<ast::Tree> {
     let scanner = scanner::AutoConcatenation::new(scanner::Scanner::new(text));
     let mut parser = parser::Parser::new(scanner);
 
-    let root = parser.parse();
+    let root = parser.parse()?;
 
-    ast::Tree { root }
+    Ok(ast::Tree { root })
 }
 
 #[cfg(test)]
@@ -35,14 +40,20 @@ mod tests {
     }
 
     macro_rules! parse_tests {
-        ($($input:literal -> $output:literal),+) => {
+        ($($input:literal -> $($output:literal)? $($error:ident)?),+) => {
             #[test]
             fn parse_tests() {
                 $({
                     let tree = parse($input);
-                    let text = to_expr(&tree);
 
-                    assert_eq!(text, $output, "rpn of \"{}\" should be \"{}\"", $input, $output);
+                    $(
+                        let text = to_expr(&tree.unwrap());
+                        assert_eq!(text, $output, "rpn of \"{}\" should be \"{}\"", $input, $output);
+                    )?
+
+                    $(
+                        assert!(tree.is_err(), "parse should {}", stringify!($error));
+                    )?
                 })+
             }
         };
@@ -60,6 +71,12 @@ mod tests {
         "a|bc" -> "abc.|",
         "ab*" -> "ab*.",
         "(ab)*" -> "ab.*",
-        "(a|b)*a(a|b)" -> "ab|*a.ab|."
+        "(a|b)*a(a|b)" -> "ab|*a.ab|.",
+        "a|" -> error,
+        "|a" -> error,
+        "*" -> error,
+        "abc)" -> error,
+        "(abc" -> error,
+        "%" -> error
     );
 }
