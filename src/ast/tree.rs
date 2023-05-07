@@ -5,7 +5,7 @@ pub struct Tree {
 }
 
 impl Tree {
-    pub fn iter_pre<F>(&self, mut f: F) where F: FnMut(&Node) {
+    pub fn iter_pre<'a, F>(&'a self, mut f: F) where F: FnMut(&'a Node) {
         self.root.iter_pre(&mut f);
     }
 
@@ -17,9 +17,10 @@ impl Tree {
         self.root.iter_post_mut(&mut f);
     }
 
+    #[allow(dead_code)]
     pub fn debug_graph(&self) -> String {
         let mut buffer = String::new();
-        buffer.push_str("digraph ast {\n");
+        buffer.push_str("digraph tree {\n");
 
         self.iter_pre(|node| {
             let id = format!("{:p}", node);

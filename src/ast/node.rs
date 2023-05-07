@@ -99,7 +99,7 @@ impl Node {
         }
     }
 
-    pub fn iter_pre<F>(&self, f: &mut F) where F: FnMut(&Node) {
+    pub fn iter_pre<'a, F>(&'a self, f: &mut F) where F: FnMut(&'a Node) {
         for child in self.children() {
             child.iter_pre(f);
         }
