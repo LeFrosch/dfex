@@ -1,43 +1,48 @@
-use std::collections::HashMap;
 use crate::ast;
-
-use super::MultiId;
+use std::collections::{HashMap, BTreeSet};
 
 pub struct Node {
-    pub id: usize,
-    pub final_state: bool,
-    pub transitions: HashMap<char, MultiId>
+    pub(super) id: usize,
+    pub(super) final_state: bool,
+    pub(super) transitions: HashMap<char, BTreeSet<usize>>,
 }
 
 pub struct Automata {
-    pub start_state: usize,
-    pub states: Vec<Node>,
+    pub(super) start_index: usize,
+    pub(super) states: Vec<Node>,
 }
 
-impl From<&ast::Tree> for Automata {
-    fn from(tree: &ast::Tree) -> Self {
-        let mut literals = Vec::new();
-        tree.iter_pre(|node| {
-            if let ast::Node::Literal(literal) = node {
-                literals.insert(literal.id, literal);
-            }
-        });
+pub fn from_tree(tree: &ast::Tree) -> Automata {
+    let mut literals = Vec::new();
+    tree.iter_pre(|node| {
+        if let ast::Node::Literal(literal) = node {
+            literals.insert(literal.id, literal);
+        }
+    });
 
-        let root_metadata = tree.root.metadata();
+    let root_metadata = tree.root.metadata();
 
-        let mut states: Vec<Node> = (0..literals.len())
-            .map(|i| node_from_literal(literals.as_slice(), i, root_metadata.last.contains(&i)))
-            .collect();
+    let mut states: Vec<Node> = (0..literals.len())
+        .map(|i| node_from_literal(literals.as_slice(), i, root_metadata.last.contains(&i)))
+        .collect();
 
-        let root_id = states.len();
-        states.push(node_from_root(literals.as_slice(), root_metadata.first.as_slice(), root_id, root_metadata.empty));
+    let root_id = states.len();
+    states.push(node_from_root(
+        literals.as_slice(),
+        root_metadata.first.as_slice(),
+        root_id,
+        root_metadata.empty,
+    ));
 
-        Self { states, start_state: root_id }
-    }
+    Automata { states, start_index: root_id }
 }
-
-fn node_from_root(literals: &[&ast::LiteralNode], first: &[usize], id: usize, final_state: bool) -> Node {
-    let mut transitions:  HashMap<char, MultiId> = HashMap::new();
+fn node_from_root(
+    literals: &[&ast::LiteralNode],
+    first: &[usize],
+    id: usize,
+    final_state: bool,
+) -> Node {
+    let mut transitions: HashMap<char, BTreeSet<usize>> = HashMap::new();
 
     for i in first {
         transitions.entry(literals[*i].character).or_default().insert(*i);
@@ -47,7 +52,7 @@ fn node_from_root(literals: &[&ast::LiteralNode], first: &[usize], id: usize, fi
 }
 
 fn node_from_literal(literals: &[&ast::LiteralNode], id: usize, final_state: bool) -> Node {
-    let mut transitions:  HashMap<char, MultiId> = HashMap::new();
+    let mut transitions: HashMap<char, BTreeSet<usize>> = HashMap::new();
 
     let literal = &literals[id];
     for i in literal.metadata.next.iter() {
@@ -57,27 +62,3 @@ fn node_from_literal(literals: &[&ast::LiteralNode], id: usize, final_state: boo
     Node { transitions, id, final_state }
 }
 
-impl Automata {
-    #[allow(dead_code)]
-    pub fn debug_graph(&self) -> String {
-        let mut buffer = String::new();
-        buffer.push_str("digraph automata {\n");
-        buffer.push_str("rankdir=LR\n");
-        buffer.push_str("start[shape=none, width=0, height=0, margin=0, label=\"\"]\n");
-
-        buffer.push_str(&format!("start -> {}\n", self.start_state));
-
-        for node in self.states.iter() {
-            buffer.push_str(&format!("{}[shape={}]\n", node.id, if node.final_state { "doublecircle" } else { "circle" }));
-
-            for (char, targets) in node.transitions.iter() {
-                for target in targets.into_iter() {
-                    buffer.push_str(&format!("{} -> {} [label=\"{}\"]\n", node.id, target, char));
-                }
-            }
-        }
-
-        buffer.push_str("}");
-        buffer
-    }
-}
