@@ -9,13 +9,27 @@ pub struct Node {
     nfa_states: BTreeSet<usize>,
 }
 
+impl Node {
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
+
+    pub fn is_final_state(&self) -> bool {
+        self.final_state
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&char, &usize)> {
+        self.transitions.iter()
+    }
+}
+
 pub struct Automata {
     pub(super) start_index: usize,
     pub(super) states: Vec<Node>,
 }
 
 impl Automata {
-    pub fn start_state(&self) -> &Node {
+    pub fn get_start_state(&self) -> &Node {
         &self.states[self.start_index]
     }
 

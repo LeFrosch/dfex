@@ -16,6 +16,6 @@ pub fn dfa(tokens: TokenStream) -> TokenStream {
     let nfa = automata::nfa_from_tree(&tree);
     let dfa = automata::dfa_from_nfa(&nfa);
 
-    gen::matcher(&input.ident, &dfa)
+    gen::matcher(&input.ident, &dfa).into()
 }
 
